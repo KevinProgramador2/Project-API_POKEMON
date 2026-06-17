@@ -1,12 +1,15 @@
+
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View, Image, Platform, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { ScrollView, TextInput } from 'react-native-gesture-handler';
+
 
 type PokemonAbilitys = {
     ability: string;
     name: string;
     url: string;
 }
+
 
 type PokemonProps = {
     name: string;
@@ -18,8 +21,8 @@ export default function Pokemon() {
     const [pokemon, setPokemon] = useState<PokemonProps[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState("");
-    //Esse estado vai capturar cada letra digitada em tempo real:
     const [inputSearch, setInputSearch] = useState("");
+    const [listaOriginal, setListaOriginal] = useState<PokemonProps[]>([]);
     const [limit, setLimit] = useState(20);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedPokemon, setSelectedPokemon] = useState<any>(null);
@@ -27,7 +30,7 @@ export default function Pokemon() {
 
     async function carregarDetalhesPokemon(url: string) {
         setLoadingDetails(true);
-        setModalVisible(true); // Abre o modal mostrando um indicador de carregamento
+        setModalVisible(true);
         try {
             const response = await fetch(url);
             const data = await response.json();
@@ -39,11 +42,10 @@ export default function Pokemon() {
         }
     }
 
-    const URLAbility = "https://pokeapi.co/api/v2/pokemon/ditto"
+    // const URLAbility = "https://pokeapi.co/api/v2/pokemon/ditto"
     const URL = "https://pokeapi.co/api/v2/pokemon/"
     const IMAGE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
 
-    // Nova função para buscar apenas UM Pokémon específico pelo nome
     async function buscarPokemon(nome: string) {
         setLoading(true);
         setError(null);
@@ -53,10 +55,7 @@ export default function Pokemon() {
             if (!response.ok) {
                 throw new Error("Pokémon não encontrado.");
             }
-
-            const data = await response.json();
-
-            // Formata o resultado para que a FlatList consiga entender.
+            const data = await response.json()
             const filteredPokemon = [{
                 name: data.name,
                 url: `https://pokeapi.co/api/v2/pokemon/${data.id}/`
@@ -64,7 +63,7 @@ export default function Pokemon() {
 
             setPokemon(filteredPokemon);
         } catch (err) {
-            // Se não achar o Pokémon na API, limpa a lista e avisa o usuário
+
             setPokemon([]);
             setError("Nenhum Pokémon encontrado com esse nome.");
         } finally {
@@ -75,17 +74,15 @@ export default function Pokemon() {
     async function listarPokemons() {
         setLoading(true);
         try {
-            if (loading) {
-                return <Text>Carregando...</Text>;
-            }
-            const response = await fetch(`${URL}?limit=${limit}&offset=0`);
-            const data = await response.json()
-            console.log('teste:', data.results)
-            setPokemon(data.results);
+            const response = await fetch(`${URL}?limit=1350&offset=0`);
+            const data = await response.json();
+
+            // setPokemon(data.results);
+            setListaOriginal(data.results);
         } catch (error) {
-            console.error("error", error)
+            console.error("error", error);
         } finally {
-            setTimeout(() => { setLoading(false) }, 2000)
+            setLoading(false);
         }
     }
 
@@ -95,26 +92,34 @@ export default function Pokemon() {
     }
 
     useEffect(() => {
-        // Toda vez que o usuário digitar, começa a contar 500ms
         const timer = setTimeout(() => {
-            setSearch(inputSearch); // Só atualiza o 'search' real após a pausa
+            setSearch(inputSearch);
         }, 500);
 
-        // Se o usuário digitar outra letra antes de dar 500ms, 
-        // essa linha limpa o timer anterior e recomeça a contagem:
         return () => clearTimeout(timer);
     }, [inputSearch]);
 
-    // O useEffect agora gerencia os dois cenários baseando-se no que foi digitado
     useEffect(() => {
-        // Se a pesquisa estiver vazia, puxa a listagem normal padrão
-        if (search.trim() === "") {
+        if (listaOriginal.length === 0) {
             listarPokemons();
-        } else {
-            // Se tem texto, faz a busca direta na API
-            buscarPokemon(search);
+            return;
         }
-    }, [limit, search]); // Executa sempre que o limite OU o texto de busca mudar
+        if (search.trim() === "") {
+            setError(null);
+            setPokemon(listaOriginal.slice(0, limit));
+        } else {
+            const filtrados = listaOriginal.filter((item) =>
+                item.name.toLowerCase().includes(search.toLowerCase())
+            );
+            if (filtrados.length === 0) {
+                setError("Nenhum Pokémon encontrado com esse nome.");
+                setPokemon([]);
+            } else {
+                setError(null);
+                setPokemon(filtrados.slice(0, limit));
+            }
+        } [search, listaOriginal, limit]
+    });
 
     return (
         <View style={styles.container}>
@@ -193,7 +198,11 @@ export default function Pokemon() {
                 data={pokemon}
                 keyExtractor={(item) => item.name}
                 contentContainerStyle={styles.listContent}
+                initialNumToRender={15}
+                maxToRenderPerBatch={20}
+                windowSize={5}
                 renderItem={({ item }) => (
+
                     <TouchableOpacity
                         style={styles.card}
                         onPress={() => carregarDetalhesPokemon(item.url)}
@@ -207,7 +216,7 @@ export default function Pokemon() {
 
                 // O botão de carregar mais só aparece se o usuário NÃO estiver pesquisando nada
                 ListFooterComponent={() => (
-                    search.trim() === "" ? (
+                    search.trim() === "" && pokemon.length < listaOriginal.length ? (
                         <View style={styles.footerContainer}>
                             <TouchableOpacity
                                 style={styles.loadMoreButton}
@@ -219,6 +228,7 @@ export default function Pokemon() {
                     ) : null
                 )}
             />
+
         </View>
     );
 }
@@ -364,12 +374,12 @@ const styles = StyleSheet.create({
     },
     loadMoreButton: {
         backgroundColor: '#3B4CCA',
-        width: '100%', // Se quiser o botão largo tradicional, ou use paddingHorizontal para ele ficar menor
+        width: '100%',
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        // Uma sombra sutil para dar acabamento
+
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -381,14 +391,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     listContent: {
-        // Dá uma folga nas laterais e na base interna para que nada fique espremido
         paddingHorizontal: 16,
         paddingBottom: 32,
     },
     footerContainer: {
-        marginTop: 20, // Descolar o botão do último card de Pokémon
+        marginTop: 20,
         width: '100%',
         alignItems: 'center',
     },
 });
-
