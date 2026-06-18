@@ -42,7 +42,7 @@ export default function PokemonDetails() {
             setPokemon(data);
 
         } catch (error) {
-            console.error("Erro ao buscar detalhes:", error);
+            console.error("Erro ao buscar detalhes: ", error);
         } finally {
             setLoading(false);
         }
