@@ -1,8 +1,9 @@
 
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View, Image, Platform, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-import { ScrollView, TextInput } from 'react-native-gesture-handler';
+import { FlatList, StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { TextInput } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
+import { useNavigation } from '@react-navigation/native';
 
 
 type PokemonProps = {
@@ -18,9 +19,7 @@ export default function Pokemon() {
     const [inputSearch, setInputSearch] = useState("");
     const [listaOriginal, setListaOriginal] = useState<PokemonProps[]>([]);
     const [limit, setLimit] = useState(20);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [selectedPokemon, setSelectedPokemon] = useState<any>(null);
-    const [loadingDetails, setLoadingDetails] = useState(false);
+    const navigation = useNavigation<any>();
 
 
     const [fontsLoaded] = useFonts({
@@ -28,21 +27,6 @@ export default function Pokemon() {
         'GoogleSans': require('../../../assets/fonts/GoogleSans-Bold.ttf'),
         'GoogleSans-Bold': require('../../../assets/fonts/GoogleSans-Regular.ttf'),
     });
-
-
-    async function carregarDetalhesPokemon(url: string) {
-        setLoadingDetails(true);
-        setModalVisible(true);
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            setSelectedPokemon(data); // Guarda todos os dados detalhados (abilities, stats, types, etc)
-        } catch (error) {
-            console.error("Erro ao buscar detalhes:", error);
-        } finally {
-            setLoadingDetails(false);
-        }
-    }
 
     const URL = "https://pokeapi.co/api/v2/pokemon/"
     const IMAGE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
@@ -134,83 +118,6 @@ export default function Pokemon() {
             />
             <Text style={styles.title}>Lista de Pokémons</Text>
 
-            {/* MODAL / CARD FLUTUANTE */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-
-                        {loadingDetails ? (
-                            <ActivityIndicator size="large" color="#FFF" style={{ marginTop: 50 }} />
-                        ) : (
-                            selectedPokemon && (
-                                <View style={{ width: '100%', flex: 1 }}>
-                                    <Image
-                                        style={styles.modalImage}
-                                        source={{ uri: selectedPokemon.sprites.other['official-artwork'].front_default || selectedPokemon.sprites.front_default }}
-                                    />
-
-                                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-                                        {/* Nome e ID */}
-                                        <Text style={styles.modalTitle}>
-                                            {selectedPokemon.name} <Text style={styles.modalId}>#{selectedPokemon.id}</Text>
-                                        </Text>
-
-                                        {/* Tipos */}
-                                        <View style={styles.typesContainer}>
-                                            {selectedPokemon.types.map((t: any) => (
-                                                <View key={t.type.name} style={styles.typeBadge}>
-                                                    <Text style={styles.typeText}>{t.type.name}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-
-                                        {/* Título da Seção Stats */}
-                                        <Text style={styles.sectionTitle}>Base Stats</Text>
-
-                                        {/* Barras de Status Mapeadas da PokeAPI */}
-                                        {selectedPokemon.stats.map((s: any) => {
-                                            const statValue = s.base_stat;
-                                            const barColor = statValue > 50 ? '#4CAF50' : '#ccc';
-                                            return (
-                                                <View key={s.stat.name} style={styles.statRow}>
-                                                    <Text style={styles.statLabel}>{s.stat.name.replace('-', ' ')}</Text>
-                                                    <Text style={styles.statValue}>{statValue}</Text>
-
-                                                    {/* Fundo da Barra */}
-                                                    <View style={styles.barBackground}>
-                                                        {/* Preenchimento da Barra */}
-                                                        <View style={[styles.barFill, { width: `${Math.min(statValue, 100)}%`, backgroundColor: barColor }]} />
-                                                    </View>
-                                                </View>
-                                            );
-                                        })}
-
-                                        <Text style={styles.sectionTitle}>Habilidades</Text>
-                                        <Text style={styles.infoTextDesc}>
-                                            {selectedPokemon.abilities.map((a: any) => a.ability.name).join(', ')}
-                                        </Text>
-                                    </ScrollView>
-
-                                </View>
-                            )
-                        )}
-
-                        {/* Botão Fechar Sutil */}
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => setModalVisible(false)}
-                        >
-                            <Text style={styles.closeButtonText}>Voltar</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
-
             {/* Mensagem de erro caso o Pokémon digitado não exista */}
             {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -228,7 +135,11 @@ export default function Pokemon() {
 
                     <TouchableOpacity
                         style={styles.card}
-                        onPress={() => carregarDetalhesPokemon(item.url)}
+                        onPress={() => {
+                            navigation.navigate("PokemonDetails", {
+                                pokemonUrl: item.url
+                            })
+                        }}
                     >
                         <View style={styles.list}>
                             <Text style={styles.nameText}>{item.name}</Text>
