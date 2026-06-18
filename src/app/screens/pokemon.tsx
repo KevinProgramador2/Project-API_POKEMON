@@ -2,13 +2,7 @@
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View, Image, Platform, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { ScrollView, TextInput } from 'react-native-gesture-handler';
-
-
-type PokemonAbilitys = {
-    ability: string;
-    name: string;
-    url: string;
-}
+import { useFonts } from 'expo-font';
 
 
 type PokemonProps = {
@@ -28,6 +22,14 @@ export default function Pokemon() {
     const [selectedPokemon, setSelectedPokemon] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
+
+    const [fontsLoaded] = useFonts({
+
+        'GoogleSans': require('../../../assets/fonts/GoogleSans-Bold.ttf'),
+        'GoogleSans-Bold': require('../../../assets/fonts/GoogleSans-Regular.ttf'),
+    });
+
+
     async function carregarDetalhesPokemon(url: string) {
         setLoadingDetails(true);
         setModalVisible(true);
@@ -42,7 +44,6 @@ export default function Pokemon() {
         }
     }
 
-    // const URLAbility = "https://pokeapi.co/api/v2/pokemon/ditto"
     const URL = "https://pokeapi.co/api/v2/pokemon/"
     const IMAGE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
 
@@ -77,7 +78,6 @@ export default function Pokemon() {
             const response = await fetch(`${URL}?limit=1350&offset=0`);
             const data = await response.json();
 
-            // setPokemon(data.results);
             setListaOriginal(data.results);
         } catch (error) {
             console.error("error", error);
@@ -104,6 +104,7 @@ export default function Pokemon() {
             listarPokemons();
             return;
         }
+
         if (search.trim() === "") {
             setError(null);
             setPokemon(listaOriginal.slice(0, limit));
@@ -111,6 +112,7 @@ export default function Pokemon() {
             const filtrados = listaOriginal.filter((item) =>
                 item.name.toLowerCase().includes(search.toLowerCase())
             );
+
             if (filtrados.length === 0) {
                 setError("Nenhum Pokémon encontrado com esse nome.");
                 setPokemon([]);
@@ -118,14 +120,15 @@ export default function Pokemon() {
                 setError(null);
                 setPokemon(filtrados.slice(0, limit));
             }
-        } [search, listaOriginal, limit]
-    });
+        }
+    }, [search, listaOriginal, limit]);
 
     return (
         <View style={styles.container}>
             <TextInput
                 style={styles.input}
                 placeholder='Pesquisa'
+                placeholderTextColor="green"
                 value={inputSearch}
                 onChangeText={setInputSearch}
             />
@@ -142,47 +145,67 @@ export default function Pokemon() {
                     <View style={styles.modalContent}>
 
                         {loadingDetails ? (
-                            <ActivityIndicator size="large" color="#0000ff" />
+                            <ActivityIndicator size="large" color="#FFF" style={{ marginTop: 50 }} />
                         ) : (
                             selectedPokemon && (
-                                <ScrollView showsVerticalScrollIndicator={false}>
-
+                                <View style={{ width: '100%', flex: 1 }}>
                                     <Image
                                         style={styles.modalImage}
-                                        source={{ uri: selectedPokemon.sprites.front_default }}
+                                        source={{ uri: selectedPokemon.sprites.other['official-artwork'].front_default || selectedPokemon.sprites.front_default }}
                                     />
 
-                                    {/* Nome */}
-                                    <Text style={styles.modalTitle}>{selectedPokemon.id} - {selectedPokemon.name}</Text>
+                                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                                        {/* Nome e ID */}
+                                        <Text style={styles.modalTitle}>
+                                            {selectedPokemon.name} <Text style={styles.modalId}>#{selectedPokemon.id}</Text>
+                                        </Text>
 
-                                    {/* Info Básica */}
-                                    <View style={styles.infoRow}>
-                                        <Text style={styles.infoText}>Altura: {selectedPokemon.height / 10}m </Text>
-                                        <Text style={styles.infoText}>Peso: {selectedPokemon.weight / 10}kg </Text>
-                                        <Text style={styles.infoText}>XP base: {selectedPokemon.base_experience}</Text>
-                                    </View>
+                                        {/* Tipos */}
+                                        <View style={styles.typesContainer}>
+                                            {selectedPokemon.types.map((t: any) => (
+                                                <View key={t.type.name} style={styles.typeBadge}>
+                                                    <Text style={styles.typeText}>{t.type.name}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
 
-                                    {/* Tipos */}
-                                    <Text style={styles.sectionTitle}>Tipos:</Text>
-                                    <Text style={styles.infoText}>
-                                        {selectedPokemon.types.map((t: any) => t.type.name).join(', ')}
-                                    </Text>
+                                        {/* Título da Seção Stats */}
+                                        <Text style={styles.sectionTitle}>Base Stats</Text>
 
-                                    {/* Habilidades */}
-                                    <Text style={styles.sectionTitle}>Habilidades:</Text>
-                                    <Text style={styles.infoText}>
-                                        {selectedPokemon.abilities.map((a: any) => a.ability.name).join(', ')}
-                                    </Text>
-                                </ScrollView>
+                                        {/* Barras de Status Mapeadas da PokeAPI */}
+                                        {selectedPokemon.stats.map((s: any) => {
+                                            const statValue = s.base_stat;
+                                            const barColor = statValue > 50 ? '#4CAF50' : '#ccc';
+                                            return (
+                                                <View key={s.stat.name} style={styles.statRow}>
+                                                    <Text style={styles.statLabel}>{s.stat.name.replace('-', ' ')}</Text>
+                                                    <Text style={styles.statValue}>{statValue}</Text>
+
+                                                    {/* Fundo da Barra */}
+                                                    <View style={styles.barBackground}>
+                                                        {/* Preenchimento da Barra */}
+                                                        <View style={[styles.barFill, { width: `${Math.min(statValue, 100)}%`, backgroundColor: barColor }]} />
+                                                    </View>
+                                                </View>
+                                            );
+                                        })}
+
+                                        <Text style={styles.sectionTitle}>Habilidades</Text>
+                                        <Text style={styles.infoTextDesc}>
+                                            {selectedPokemon.abilities.map((a: any) => a.ability.name).join(', ')}
+                                        </Text>
+                                    </ScrollView>
+
+                                </View>
                             )
                         )}
 
-                        {/* Botão Fechar */}
+                        {/* Botão Fechar Sutil */}
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => setModalVisible(false)}
                         >
-                            <Text style={styles.closeButtonText}>Fechar</Text>
+                            <Text style={styles.closeButtonText}>Voltar</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -234,56 +257,63 @@ export default function Pokemon() {
 }
 
 const styles = StyleSheet.create({
+
     container: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#121212",
         paddingHorizontal: 16,
         paddingTop: 50,
     },
     title: {
         fontSize: 26,
         fontWeight: 'bold',
-        color: 'blue',
+        color: '#FFFFFF',
         marginBottom: 16,
-        fontFamily: "bold",
+        fontFamily: "GoogleSans-Bold",
         shadowOffset: { width: 0, height: 0.2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     input: {
-        backgroundColor: "white",
+        fontFamily: 'GoogleSans',
+        backgroundColor: "#cdcdcd",
+        color: "#FFFFFF",
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#ddd',
-        shadowColor: "12",
+        borderColor: '#333', // Bordinha sutil
+        shadowColor: "#000",
         fontSize: 16,
         marginBottom: 40,
         width: '100%',
     },
     card: {
-        backgroundColor: 'white',
+        backgroundColor: '#1e1e1e', // Fundo escuro do card
         borderRadius: 8,
         padding: 12,
         marginBottom: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        elevation: 2, // Sombra para Android
-        shadowColor: '#000', // Sombra para iOS
+        elevation: 4,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.3,
         shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: '#2a2a2a',
     },
     pokemonName: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#444',
+        color: '#FFFFFF',
         marginLeft: 16,
+        fontFamily: 'GoogleSans',
     },
     tituloPokemon: {
-        textShadowColor: "red",
+        fontFamily: 'GoogleSans',
         fontStyle: 'normal',
+
     },
     image: {
         width: 70,
@@ -291,7 +321,7 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
     },
     errorText: {
-        color: 'red',
+        color: '#ff6b6b',
         textAlign: 'center',
         marginTop: 20,
     },
@@ -300,70 +330,10 @@ const styles = StyleSheet.create({
         color: '#888',
         marginTop: 40,
     },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        alignItems: 'center',
-    },
-    modalContent: {
-        width: '85%',
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 20,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-        maxHeight: '80%',
-    },
-    modalImage: {
-        width: 150,
-        height: 150,
-        alignSelf: 'center',
-    },
-    modalTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 15,
-        color: '#333',
-        textTransform: 'capitalize'
-    },
-    infoRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        width: '100%',
-        marginBottom: 15,
-    },
-    infoText: {
-        fontSize: 16,
-        color: '#666',
-    },
     nameText: {
-        textTransform: 'capitalize'
-    },
-    sectionTitle: {
+        textTransform: 'capitalize',
+        color: '#FFFFFF',
         fontSize: 18,
-        fontWeight: 'bold',
-        marginTop: 10,
-        marginBottom: 5,
-        color: '#444',
-    },
-    closeButton: {
-        backgroundColor: '#FF3B30',
-        paddingVertical: 10,
-        paddingHorizontal: 30,
-        borderRadius: 10,
-        marginTop: 20,
-        width: '100%',
-        alignItems: 'center',
-    },
-    closeButtonText: {
-        color: 'white',
-        fontSize: 16,
         fontWeight: 'bold',
     },
     list: {
@@ -373,22 +343,26 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     loadMoreButton: {
-        backgroundColor: '#3B4CCA',
+        backgroundColor: '#333333',
+        borderWidth: 1,
+        borderColor: '#444',
         width: '100%',
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 2,
     },
     loadMoreText: {
         color: '#FFF',
         fontWeight: 'bold',
+    }, Content: {
+        paddingHorizontal: 16,
+        paddingBottom: 32,
     },
     listContent: {
         paddingHorizontal: 16,
@@ -398,5 +372,131 @@ const styles = StyleSheet.create({
         marginTop: 20,
         width: '100%',
         alignItems: 'center',
+    },
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        marginBottom: 15,
+    },
+    infoText: {
+        fontSize: 16,
+        color: '#AAA',
+    },
+
+    /* =========================================
+       ESTILO MODAL DARK THEME
+       ========================================= */
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    modalContent: {
+        width: '100%',
+        height: '80%',
+        backgroundColor: '#1e1e1e',
+        borderTopLeftRadius: 40,
+        borderTopRightRadius: 40,
+        paddingHorizontal: 20,
+        paddingTop: 0,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    modalImage: {
+        width: 220,
+        height: 220,
+        marginTop: -110,
+        alignSelf: 'center',
+        zIndex: 10,
+    },
+    modalTitle: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: '#FFFFFF',
+        textTransform: 'capitalize',
+        marginTop: 10,
+    },
+    modalId: {
+        fontSize: 20,
+        color: '#888',
+        fontWeight: 'normal',
+    },
+    typesContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 10,
+        marginVertical: 15,
+    },
+    typeBadge: {
+        backgroundColor: '#333',
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+    },
+    typeText: {
+        color: '#FFF',
+        textTransform: 'capitalize',
+        fontWeight: 'bold',
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 20,
+        marginBottom: 15,
+        color: '#FFFFFF',
+    },
+    infoTextDesc: {
+        fontSize: 14,
+        color: '#AAA',
+        textTransform: 'capitalize',
+        lineHeight: 22,
+    },
+    statRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    statLabel: {
+        color: '#AAA',
+        fontSize: 13,
+        width: 80,
+        textTransform: 'capitalize',
+    },
+    statValue: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+        width: 35,
+        textAlign: 'right',
+        marginRight: 10,
+    },
+    barBackground: {
+        flex: 1,
+        height: 6,
+        backgroundColor: '#333',
+        borderRadius: 5,
+        overflow: 'hidden',
+    },
+    barFill: {
+        height: '100%',
+        borderRadius: 5,
+    },
+    closeButton: {
+        backgroundColor: 'transparent',
+        paddingVertical: 15,
+        width: '100%',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    closeButtonText: {
+        color: '#AAA',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });

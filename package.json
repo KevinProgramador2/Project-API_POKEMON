@@ -8,9 +8,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
-   "dependencies": {
+  "dependencies": {
     "@react-navigation/stack": "^7.10.3",
     "expo": "~54.0.34",
+    "expo-font": "~14.0.12",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-dom": "19.1.0",
