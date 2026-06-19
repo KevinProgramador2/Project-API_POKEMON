@@ -14,7 +14,7 @@ export default function App() {
         <NavigationContainer>
             <Stack.Navigator>
                 <Stack.Screen
-                    name="Pokemon"
+                    name="PokéDex"
                     component={Pokemon}
                     options={{
                         // Transforma o título do cabeçalho em uma imagem
