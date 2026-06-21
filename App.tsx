@@ -4,15 +4,33 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Pokemon from './src/app/screens/pokemon';
 import PokemonDetails from "./src/app/screens/pokemonDetails";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+const caminho = require('./assets/pokedex.png');
 const Stack = createStackNavigator<any>();
 
 export default function App() {
     const caminho = require('./assets/pokedex.png');
 
     return (
+         <GestureHandlerRootView style={{ flex: 1 }}>
         <NavigationContainer>
-            <Stack.Navigator>
+            <Stack.Navigator
+        screenOptions={{
+            headerStyle: { backgroundColor: '#ff3333' },
+            height: 50,
+            headerBackground: () => (
+                <View style={{ flex: 1, backgroundColor: '#CC0000' }} />
+            ),
+                    headerTitle: () => (
+            <Image 
+                source={caminho} 
+                style={{ width: 120, height: 35, resizeMode: 'contain' }}
+            />
+        ),
+            headerTintColor: '#FFFFFF',
+        }}
+    >
                 <Stack.Screen
                     name="PokéDex"
                     component={Pokemon}
@@ -32,6 +50,7 @@ export default function App() {
                     }}/>
             </Stack.Navigator>
         </NavigationContainer>
+    </GestureHandlerRootView>
     );
 }
 
