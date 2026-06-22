@@ -17,17 +17,16 @@ export default function App() {
         <NavigationContainer>
             <Stack.Navigator
         screenOptions={{
-            headerStyle: { backgroundColor: '#ff3333' },
-            height: 50,
+            headerStyle: { backgroundColor: '#ff3333', height: 50 },
             headerBackground: () => (
                 <View style={{ flex: 1, backgroundColor: '#CC0000' }} />
             ),
-                    headerTitle: () => (
-            <Image 
-                source={caminho} 
-                style={{ width: 120, height: 35, resizeMode: 'contain' }}
-            />
-        ),
+            headerTitle: () => (
+                <Image 
+                    source={caminho} 
+                    style={{ width: 120, height: 35, resizeMode: 'contain' }}
+                />
+            ),
             headerTintColor: '#FFFFFF',
         }}
     >
