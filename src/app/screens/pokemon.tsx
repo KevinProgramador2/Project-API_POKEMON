@@ -1,8 +1,6 @@
 
-import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, Pressable, Modal } from 'react-native';
-import { TextInput } from 'react-native-gesture-handler';
-import { ScrollView } from 'react-native';
+import { useCallback, useEffect, useState, memo } from 'react';
+import { FlatList, StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, Pressable, TextInput, ScrollView } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useNavigation } from '@react-navigation/native';
 
@@ -43,31 +41,25 @@ const STAT_LABELS: Record<string, string> = {
 
 const STAT_COLORS = ['#78C850', '#F08030', '#6890F0', '#F8D030', '#98D8D8', '#C03028'];
 
-function PokemonCard({ item }: { item: PokemonProps }) {
+const PokemonCard = memo(function PokemonCard({ item }: { item: PokemonProps }) {
     const navigation = useNavigation<any>();
-
     const IMAGE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
     const pokemonId = item.url.split('/').filter(Boolean).pop();
     const imageUri = `${IMAGE}/${pokemonId}.png`;
 
-    // Função que substitui a abertura do Modal pela navegação
-    function abrirDetalhes() {
-        navigation.navigate('PokemonDetails', { pokemonUrl: item.url });
-    }
+    const abrirDetalhes = () => navigation.navigate('PokemonDetails', { pokemonUrl: item.url });
 
     return (
-        <View style={styles.cardWrap}>
-            <Pressable style={styles.card} onPress={abrirDetalhes}>
-                <View style={[styles.colorBar, { backgroundColor: '#888' }]} />
-                <View style={styles.cardFront}>
-                    <Text style={styles.pokemonNum}>#{pokemonId?.padStart(3, '0')}</Text>
-                    <Image style={styles.image} source={{ uri: imageUri }} />
-                    <Text style={styles.nameText}>{item.name}</Text>
-                </View>
-            </Pressable>
-        </View>
+        <Pressable style={styles.card} onPress={abrirDetalhes}>
+            <View style={[styles.colorBar, { backgroundColor: '#888' }]} />
+            <View style={styles.cardFront}>
+                <Text style={styles.pokemonNum}>#{pokemonId?.toString().padStart(3, '0')}</Text>
+                <Image style={styles.image} source={{ uri: imageUri }} />
+                <Text style={styles.nameText}>{item.name}</Text>
+            </View>
+        </Pressable>
     );
-}
+});
 
 export default function Pokemon() {
     const [loading, setLoading] = useState(false);
@@ -104,56 +96,24 @@ export default function Pokemon() {
 
 
     const [fontsLoaded] = useFonts({
-
-        'GoogleSans': require('../../../assets/fonts/GoogleSans-Bold.ttf'),
-        'GoogleSans-Bold': require('../../../assets/fonts/GoogleSans-Regular.ttf'),
+        'GoogleSans': require('../../../assets/fonts/GoogleSans-Regular.ttf'),
+        'GoogleSans-Bold': require('../../../assets/fonts/GoogleSans-Bold.ttf'),
     });
 
-    const URL = "https://pokeapi.co/api/v2/pokemon/"
-    const IMAGE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon"
-
-    async function buscarPokemon(nome: string) {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${nome.toLowerCase().trim()}`);
-
-            if (!response.ok) {
-                throw new Error("Pokémon não encontrado.");
-            }
-            const data = await response.json()
-            const filteredPokemon = [{
-                name: data.name,
-                url: `https://pokeapi.co/api/v2/pokemon/${data.id}/`
-            }];
-
-            setPokemon(filteredPokemon);
-        } catch (err) {
-
-            setPokemon([]);
-            setError("Nenhum Pokémon encontrado com esse nome.");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const URL = "https://pokeapi.co/api/v2/pokemon/";
+    const IMAGE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
     async function listarPokemons() {
         setLoading(true);
         try {
             const response = await fetch(`${URL}?limit=1350&offset=0`);
             const data = await response.json();
-
             setListaOriginal(data.results);
         } catch (error) {
-            console.error("error", error);
+            setError('Erro ao carregar Pokémons');
         } finally {
             setLoading(false);
         }
-    }
-
-    function getPokemonImage(url: string) {
-        const pokemonId = url.split('/').filter(Boolean).pop();
-        return (`${IMAGE}/${pokemonId}.png`)
     }
 
     async function buscarPokemonsPorTipo(tipo: string) {
@@ -230,27 +190,44 @@ export default function Pokemon() {
         }
     }, [tipoSelecionado]);
 
+    const renderItem = useCallback(({ item }: { item: PokemonProps }) => (
+        <View style={{ flex: 1 / 3, padding: 4 }}>
+            <PokemonCard item={item} />
+        </View>
+    ), []);
+
+    const loadMore = useCallback(() => {
+        if (tipoSelecionado) return;
+        if (pokemon.length >= listaOriginal.length) return;
+        setLimit((prev) => prev + 21);
+    }, [tipoSelecionado, pokemon.length, listaOriginal.length]);
+
+    if (!fontsLoaded) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#ffffff" />
+            </View>
+        );
+    }
+
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-        >
-            <TextInput
-                style={styles.input}
-                placeholder="Pesquisa"
-                placeholderTextColor="#ffffff"
-                value={inputSearch}
-                onChangeText={setInputSearch}
-            />
-            <Text style={styles.title}>Lista de Pokémons</Text>
-            <View style={styles.filtroWrapper}>
-                <TouchableOpacity
-                    style={styles.filtroToggle}
-                    onPress={() => setFiltroAberto(!filtroAberto)}
-                >
+        <View style={styles.container}>
+            <View style={styles.searchRow}>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Pesquisa"
+                    placeholderTextColor="#ffffff"
+                    value={inputSearch}
+                    onChangeText={setInputSearch}
+                />
+                <TouchableOpacity style={styles.filtroToggle} onPress={() => setFiltroAberto((v) => !v)}>
                     <Text style={styles.filtroToggleIcone}>☰</Text>
                 </TouchableOpacity>
+            </View>
+
+            <Text style={styles.title}>Lista de Pokémons</Text>
+
+            <View style={styles.filtroWrapper}>
                 {filtroAberto && (
                     <ScrollView style={styles.filtroLista} nestedScrollEnabled>
                         {tipoSelecionado && (
@@ -290,30 +267,35 @@ export default function Pokemon() {
                     </ScrollView>
                 )}
             </View>
+
             {loadingTipo && <ActivityIndicator size="small" color="#0000ff" style={{ margin: 10 }} />}
 
-            {/* Mensagem de erro caso o Pokémon digitado não exista */}
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             {loading && <ActivityIndicator size="small" color="#0000ff" style={{ margin: 10 }} />}
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                {pokemon.map(item => (
-                    <View key={item.name} style={{ width: '32%', marginBottom: 8 }}>
-                        <PokemonCard item={item} />
+            <FlatList
+                data={pokemon}
+                keyExtractor={(item) => item.name}
+                renderItem={renderItem}
+                numColumns={3}
+                columnWrapperStyle={{ justifyContent: 'space-between' }}
+                contentContainerStyle={styles.listContent}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.5}
+                initialNumToRender={21}
+                ListEmptyComponent={<Text style={styles.emptyText}>Nenhum Pokémon encontrado.</Text>}
+                ListFooterComponent={() => (
+                    <View style={styles.footerContainer}>
+                        {search.trim() === "" && pokemon.length < listaOriginal.length && (
+                            <TouchableOpacity style={styles.loadMoreButton} onPress={() => setLimit(prev => prev + 21)}>
+                                <Text style={styles.loadMoreText}>Carregar Mais Pokémons</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
-                ))}
-            </View>
-
-            {search.trim() === "" && pokemon.length < listaOriginal.length && (
-                <View style={styles.footerContainer}>
-                    <TouchableOpacity style={styles.loadMoreButton} onPress={() => setLimit(prev => prev + 21)}>
-                        <Text style={styles.loadMoreText}>Carregar Mais Pokémons</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-        </ScrollView>
+                )}
+            />
+        </View>
     );
 }
 
@@ -333,7 +315,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#121212",
         paddingHorizontal: 16,
         paddingTop: 50,
-        height: '100vh' as any,
+        flex: 1,
     },
     title: {
         fontSize: 26,
@@ -344,7 +326,9 @@ const styles = StyleSheet.create({
         letterSpacing: 1.5,
         textAlign: 'center',
     },
+    searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     input: {
+        flex: 1,
         fontFamily: 'GoogleSans',
         backgroundColor: "#1e1e1e",
         color: "#ffffff",
@@ -355,9 +339,8 @@ const styles = StyleSheet.create({
         borderColor: '#333',
         shadowColor: "#000",
         fontSize: 16,
-        marginBottom: 40,
-        width: '100%',
     },
+
     columnWrapper: { flex: 1, justifyContent: 'space-between', marginBottom: 8 },
     cardWrap: {
         flex: 1,
@@ -424,26 +407,6 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
 
-    loadMoreButton: {
-        backgroundColor: '#333333',
-        borderWidth: 1,
-        borderColor: '#444',
-        width: '100%',
-        minHeight: 56,
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    loadMoreText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: 16,
-        textAlign: 'center',
-    },
-
     Content: {
         paddingHorizontal: 16,
         paddingBottom: 32,
@@ -451,16 +414,20 @@ const styles = StyleSheet.create({
     },
 
     listContent: {
-        paddingHorizontal: 16,
+        paddingHorizontal: 4,
         paddingBottom: 32,
+        paddingTop: 12,
     },
-
-    footerContainer: {
-        marginTop: 20,
-        marginBottom: 40,
-        width: '100%',
-        alignItems: 'center',
+    footerContainer: { alignItems: 'center', marginVertical: 20 },
+    loadMoreButton: {
+        backgroundColor: '#2a2a2a',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#333',
     },
+    loadMoreText: { color: '#fff', fontWeight: 'bold' },
     infoRow: {
         flexDirection: 'row',
         gap: 20,
@@ -623,16 +590,15 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
     },
     filtroToggle: {
-        alignSelf: 'flex-start',
         width: 44,
+        height: 44,
         alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#1e1e1e',
         borderWidth: 1,
         borderColor: '#333',
-        borderRadius: 8,
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        marginBottom: 16,
+        borderRadius: 10,
+        marginLeft: 8,
     },
     filtroToggleIcone: {
         color: '#FFFFFF',
@@ -640,22 +606,22 @@ const styles = StyleSheet.create({
     },
     filtroLista: {
         position: 'absolute',
-        top: 60,
-        left: 0,
+        top: 56,
+        right: 16,
         zIndex: 999,
-        width: 190,
-        backgroundColor: 'rgba(30, 30, 30, 0.55)',
+        width: 220,
+        backgroundColor: 'rgba(30, 30, 30, 0.95)',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.15)',
-        borderRadius: 20,
-        maxHeight: 260,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        borderRadius: 12,
+        maxHeight: 360,
         overflow: 'hidden',
-        elevation: 10,
+        elevation: 12,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        padding: 6,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+        padding: 8,
     },
     filtroItem: {
         paddingVertical: 12,
