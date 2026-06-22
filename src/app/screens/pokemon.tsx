@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useState, memo } from 'react';
-import { FlatList, StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, Pressable, TextInput, ScrollView } from 'react-native';
+import { FlatList, StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, Pressable, TextInput, ScrollView, Platform, Modal, TouchableWithoutFeedback } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useNavigation } from '@react-navigation/native';
 
@@ -228,8 +228,16 @@ export default function Pokemon() {
             <Text style={styles.title}>Lista de Pokémons</Text>
 
             <View style={styles.filtroWrapper}>
-                {filtroAberto && (
-                    <ScrollView style={styles.filtroLista} nestedScrollEnabled>
+                {filtroAberto && Platform.OS === 'web' && (
+                    <ScrollView
+                        style={[styles.filtroLista, styles.filtroListaScroll]}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator
+                        contentContainerStyle={styles.filtroListaContent}
+                        scrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        removeClippedSubviews={false}
+                    >
                         {tipoSelecionado && (
                             <TouchableOpacity
                                 style={styles.filtroLimparBotao}
@@ -266,6 +274,68 @@ export default function Pokemon() {
                         ))}
                     </ScrollView>
                 )}
+
+                {filtroAberto && Platform.OS !== 'web' && (
+                    <Modal
+                        transparent
+                        animationType="fade"
+                        visible={filtroAberto}
+                        onRequestClose={() => setFiltroAberto(false)}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <TouchableWithoutFeedback onPress={() => setFiltroAberto(false)}>
+                                <View style={styles.filtroModalOverlay} />
+                            </TouchableWithoutFeedback>
+
+                            <View style={styles.filtroModalContent} pointerEvents="box-none">
+                                <View style={styles.filtroModalContainer}>
+                                    <ScrollView
+                                        nestedScrollEnabled
+                                        showsVerticalScrollIndicator
+                                        contentContainerStyle={styles.filtroListaContent}
+                                        keyboardShouldPersistTaps="handled"
+                                        removeClippedSubviews={false}
+                                    >
+                                        {tipoSelecionado && (
+                                            <TouchableOpacity
+                                                style={styles.filtroLimparBotao}
+                                                onPress={() => {
+                                                    setTipoSelecionado(null);
+                                                    setFiltroAberto(false);
+                                                }}
+                                            >
+                                                <Text style={styles.filtroLimparTexto}>✕ Limpar Filtro</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {tiposDisponiveis.map((tipo) => (
+                                            <TouchableOpacity
+                                                key={tipo.value}
+                                                style={[
+                                                    styles.filtroItem,
+                                                    { backgroundColor: tipo.cor },
+                                                    tipoSelecionado === tipo.value && styles.filtroItemAtivo,
+                                                ]}
+                                                onPress={() => {
+                                                    selecionarTipo(tipo.value);
+                                                    setFiltroAberto(false);
+                                                }}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.filtroItemTexto,
+                                                        tipoSelecionado === tipo.value && styles.filtroItemTextoAtivo,
+                                                    ]}
+                                                >
+                                                    {tipo.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                )}
             </View>
 
             {loadingTipo && <ActivityIndicator size="small" color="#0000ff" style={{ margin: 10 }} />}
@@ -281,6 +351,7 @@ export default function Pokemon() {
                 numColumns={3}
                 columnWrapperStyle={{ justifyContent: 'space-between' }}
                 contentContainerStyle={styles.listContent}
+                nestedScrollEnabled
                 onEndReached={loadMore}
                 onEndReachedThreshold={0.5}
                 initialNumToRender={21}
@@ -615,13 +686,39 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.12)',
         borderRadius: 12,
         maxHeight: 360,
-        overflow: 'hidden',
         elevation: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.35,
         shadowRadius: 8,
         padding: 8,
+    },
+    filtroListaContent: {
+        paddingBottom: 8,
+    },
+    filtroListaScroll: {
+        height: Platform.OS === 'web' ? undefined : 320,
+        maxHeight: 360,
+    },
+    filtroModalContainer: {
+        width: 220,
+        backgroundColor: 'rgba(30, 30, 30, 0.95)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        borderRadius: 12,
+        maxHeight: 360,
+        padding: 8,
+        elevation: 16,
+    },
+    filtroModalOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.5)'
+    },
+    filtroModalContent: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'flex-end',
+        paddingTop: 56,
+        paddingRight: 16,
     },
     filtroItem: {
         paddingVertical: 12,
