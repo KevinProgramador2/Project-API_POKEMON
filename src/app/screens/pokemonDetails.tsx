@@ -64,8 +64,8 @@ export default function PokemonDetails() {
 
     const imagemAtual =
         variante === 'femea' ? imagemFemea :
-        variante === 'shinyMacho' ? imagemShinyMacho :
-        imagemMacho;
+            variante === 'shinyMacho' ? imagemShinyMacho :
+                imagemMacho;
 
     return (
         <ScrollView style={styles.container}>
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     },
     infoText: {
         fontSize: 16,
-        color: '#AAA',
+        color: '#fff',
     },
     sectionTitle: {
         fontSize: 18,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     statLabel: {
-        color: '#888',
+        color: '#fff',
         fontSize: 12,
         width: 55,
         textAlign: 'right',
@@ -292,6 +292,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     variantBotaoTextoDesabilitado: {
-        color: '#555',
+        color: '#fff',
     },
 });
