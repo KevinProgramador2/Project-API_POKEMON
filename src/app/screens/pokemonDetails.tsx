@@ -1,4 +1,4 @@
-import { View, Text, ActivityIndicator, Image, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator, Image, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 
@@ -17,10 +17,13 @@ const STAT_LABELS: Record<string, string> = {
 
 const STAT_COLORS = ['#78C850', '#F08030', '#6890F0', '#F8D030', '#98D8D8', '#C03028'];
 
+type Variante = 'macho' | 'femea' | 'shinyMacho';
+
 export default function PokemonDetails() {
     const route = useRoute<any>();
     const [pokemon, setPokemon] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [variante, setVariante] = useState<Variante>('macho');
     const { pokemonUrl } = route.params;
 
     async function carregarDetalhesPokemon() {
@@ -50,15 +53,27 @@ export default function PokemonDetails() {
     const mainType = pokemon?.types?.[0]?.type?.name || "normal";
     const pokemonColor = typeColors[mainType] || "#333";
 
+    const artwork = pokemon.sprites?.other?.["official-artwork"] || {};
+    const sprites = pokemon.sprites || {};
+
+    const imagemMacho = artwork.front_default || sprites.front_default;
+    const imagemFemea = sprites.front_female || artwork.front_female || imagemMacho;
+    const imagemShinyMacho = artwork.front_shiny || sprites.front_shiny || imagemMacho;
+
+    const temFemea = !!sprites.front_female || !!artwork.front_female;
+
+    const imagemAtual =
+        variante === 'femea' ? imagemFemea :
+        variante === 'shinyMacho' ? imagemShinyMacho :
+        imagemMacho;
+
     return (
         <ScrollView style={styles.container}>
             {/* TOPO COLORIDO (HEADER REAPROVEITADO) */}
             <View style={[styles.header, { backgroundColor: pokemonColor }]}>
                 <Image
                     style={styles.pokemonImage}
-                    source={{
-                        uri: pokemon.sprites.other["official-artwork"].front_default || pokemon.sprites.front_default,
-                    }}
+                    source={{ uri: imagemAtual }}
                 />
                 <Text style={styles.pokemonTitle}>{pokemon.name}</Text>
                 <Text style={styles.pokemonId}>#{pokemon.id.toString().padStart(3, '0')}</Text>
@@ -69,6 +84,30 @@ export default function PokemonDetails() {
                 <View style={styles.infoRow}>
                     <Text style={styles.infoText}>Altura: {pokemon.height}</Text>
                     <Text style={styles.infoText}>Peso: {pokemon.weight}</Text>
+
+                    <View style={styles.variantesBotoes}>
+                        <TouchableOpacity
+                            style={[styles.variantBotao, variante === 'macho' && styles.variantBotaoAtivo]}
+                            onPress={() => setVariante('macho')}
+                        >
+                            <Text style={styles.variantBotaoTexto}>♂</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.variantBotao, variante === 'femea' && styles.variantBotaoAtivo]}
+                            onPress={() => temFemea && setVariante('femea')}
+                            disabled={!temFemea}
+                        >
+                            <Text style={[styles.variantBotaoTexto, !temFemea && styles.variantBotaoTextoDesabilitado]}>♀</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.variantBotao, variante === 'shinyMacho' && styles.variantBotaoAtivo]}
+                            onPress={() => setVariante('shinyMacho')}
+                        >
+                            <Text style={styles.variantBotaoTexto}>✨</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
                 <Text style={[styles.infoText, { marginBottom: 12 }]}>
                     Experiência Base: {pokemon.base_experience}
@@ -158,6 +197,8 @@ const styles = StyleSheet.create({
     },
     infoRow: {
         flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         gap: 20,
         marginBottom: 4,
     },
@@ -225,5 +266,32 @@ const styles = StyleSheet.create({
         width: 28,
         textAlign: 'right',
         marginLeft: 6,
+    },
+    variantesBotoes: {
+        flexDirection: 'row',
+        gap: 6,
+        marginLeft: 'auto',
+    },
+    variantBotao: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#2a2a2a',
+        borderWidth: 1,
+        borderColor: '#3a3a3a',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    variantBotaoAtivo: {
+        backgroundColor: '#4CAF50',
+        borderColor: '#4CAF50',
+    },
+    variantBotaoTexto: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    variantBotaoTextoDesabilitado: {
+        color: '#555',
     },
 });
