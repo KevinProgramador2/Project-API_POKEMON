@@ -435,11 +435,11 @@ const styles = StyleSheet.create({
     badge: { paddingVertical: 2, paddingHorizontal: 6, borderRadius: 20, marginRight: 4, marginBottom: 4 },
     badgeText: { fontSize: 12, fontWeight: '600' },
     statRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-    statLabel: { color: '#888', fontSize: 11, width: 44, textAlign: 'right', marginRight: 4 },
+    statLabel: { color: '#fff', fontSize: 11, width: 44, textAlign: 'right', marginRight: 4 },
     statBarBg: { flex: 1, height: 6, backgroundColor: '#333', borderRadius: 4, overflow: 'hidden' },
     statBar: { height: '100%', borderRadius: 4 },
     statVal: { color: '#fff', fontSize: 11, width: 24, textAlign: 'right', marginLeft: 2 },
-    pokemonNum: { color: '#555', fontSize: 10 },
+    pokemonNum: { color: '#fff', fontSize: 12 },
 
 
     pokemonName: {
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
-        color: '#888',
+        color: '#fff',
         marginTop: 40,
     },
     nameText: {
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     },
     modalId: {
         fontSize: 18,
-        color: '#888',
+        color: '#fff',
         fontWeight: 'normal',
         marginTop: 2,
     },
